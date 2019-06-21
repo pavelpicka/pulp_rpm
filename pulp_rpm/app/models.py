@@ -10,8 +10,11 @@ from pulp_rpm.app.constants import (CHECKSUM_CHOICES, CREATEREPO_PACKAGE_ATTRS,
                                     CREATEREPO_UPDATE_COLLECTION_ATTRS,
                                     CREATEREPO_UPDATE_COLLECTION_PACKAGE_ATTRS,
                                     CREATEREPO_UPDATE_RECORD_ATTRS,
-                                    CREATEREPO_UPDATE_REFERENCE_ATTRS)
+                                    CREATEREPO_UPDATE_REFERENCE_ATTRS,
+                                    MODULEMD_MODULE_ATTR,
+                                    PULP_MODULE_ATTR)
 
+import json
 
 log = getLogger(__name__)
 
@@ -179,6 +182,8 @@ class Package(Content):
 
     time_build = models.BigIntegerField(null=True)
     time_file = models.BigIntegerField(null=True)
+
+    modular = models.BooleanField(default=False)
 
     @property
     def filename(self):
@@ -658,3 +663,43 @@ class RpmDistribution(PublicationDistribution):
     """
 
     TYPE = 'rpm'
+
+
+class Modulemd(Content):
+    """
+    The "Modulemd" content type. Modularity support.
+    """
+    TYPE = "modulemd"
+
+    # required metadata
+    name = models.CharField(max_length=255)
+    stream = models.CharField(max_length=255)
+    version = models.CharField(max_length=255)
+    context = models.CharField(max_length=255)
+    arch = models.CharField(max_length=255)
+
+    dependencies = models.TextField(default='[]')
+    artifacts = models.TextField(default='[]')
+    packages = models.ManyToManyField(Package)
+
+    def packages_to_pkg_ver(self):
+        """Parse packages for package name and version."""
+        packages = json.loads(self.artifacts)
+        ret = []
+        for pkg in packages:
+            name = pkg[:pkg.split(':')[0].rfind('-')]
+            version = pkg.split(':')[1][:pkg.split(':')[1].rfind('-')]
+            ret.append((name, version))
+        return ret
+
+
+class ModulemdDefaults(Content):
+    """
+    The "ModulemdDefaults" content type. Modularity support.
+    """
+    TYPE = "modulemd-defaults"
+
+    module = models.CharField(max_length=255)
+    stream = models.CharField(max_length=255)
+    profiles = models.CharField(max_length=255)
+

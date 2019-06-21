@@ -117,3 +117,15 @@ CREATEREPO_UPDATE_REFERENCE_ATTRS = SimpleNamespace(
     TITLE='title',
     TYPE='type'
 )
+
+MODULEMD_MODULE_ATTR = SimpleNamespace(
+    ARCH='arch',
+    ARTIFACTS='artifacts',
+    CONTEXT='context',
+    NAME='name',
+    STREAM='stream',
+    VERSION='version',
+    DEPENDENCIES='dependencies'
+)
+
+PULP_MODULE_ATTR = MODULEMD_MODULE_ATTR

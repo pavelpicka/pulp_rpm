@@ -14,6 +14,7 @@ from pulpcore.plugin.serializers import (
 )
 
 from pulp_rpm.app.models import (
+    Modulemd,
     Package,
     RpmDistribution,
     RpmRemote,
@@ -447,3 +448,59 @@ class CopySerializer(serializers.Serializer):
             new_data.update({'types': final_types})
 
         return new_data
+
+
+class ModulemdSerializer(SingleArtifactContentSerializer):
+    """
+    Modulemd serializer.
+    """
+    name = serializers.CharField(
+        help_text=_("Modulemd name."),
+    )
+    stream = serializers.CharField(
+        help_text=_("Stream name."),
+    )
+    version = serializers.CharField(
+        help_text=_("Modulemd version."),
+    )
+    context = serializers.CharField(
+        help_text=_("Modulemd context."),
+    )
+    arch = serializers.CharField(
+        help_text=_("Modulemd architecture."),
+    )
+    artifacts = serializers.CharField(
+        help_text=_("Modulemd artifacts (rpm packages)."),
+        allow_null=True
+    )
+    dependencies = serializers.CharField(
+        help_text=_("Modulemd dependencies."),
+        allow_null=True
+    )
+    packages = serializers.PrimaryKeyRelatedField(
+        help_text=_("Pulp connected packages."),
+        allow_null=True,
+        required=False,
+        queryset=Package.objects.all(),
+        many=True
+    )
+
+    def create(self, validated_data):
+        modulemd = Modulemd.objects.create(**validated_data)
+        # scan for pkgs, will be refactored elsewhere
+        pkgs = modulemd.packages_to_pkg_ver()
+        missing = []  # info for user to know he's missing packages
+        for pkg in pkgs:
+            try:
+                p = Package.objects.get(name=pkg[0], version=pkg[1])
+                modulemd.packages.add(p)
+            except Exception:
+                missing.append(pkg)
+        return modulemd
+
+    class Meta:
+        fields = (
+            'name', 'stream', 'version', 'context', 'arch',
+            'artifacts', 'dependencies', 'packages'
+        )
+        model = Modulemd

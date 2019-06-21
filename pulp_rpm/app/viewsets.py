@@ -25,11 +25,27 @@ from pulpcore.plugin.viewsets import (
 
 from pulp_rpm.app import tasks
 from pulp_rpm.app.shared_utils import _prepare_package
-from pulp_rpm.app.models import Package, RpmDistribution, RpmRemote, RpmPublication, UpdateRecord
+from pulp_rpm.app.constants import (
+    MODULEMD_MODULE_ATTR,
+    PULP_MODULE_ATTR
+    )
+from pulp_rpm.app.modulemd import (
+    _get_modules,
+    _get_nsvca
+    )
+from pulp_rpm.app.models import (
+    Package,
+    RpmDistribution,
+    RpmRemote,
+    RpmPublication,
+    UpdateRecord,
+    Modulemd
+)
 from pulp_rpm.app.serializers import (
     CopySerializer,
     MinimalPackageSerializer,
     MinimalUpdateRecordSerializer,
+    ModulemdSerializer,
     OneShotUploadSerializer,
     PackageSerializer,
     RpmDistributionSerializer,
@@ -37,6 +53,10 @@ from pulp_rpm.app.serializers import (
     RpmPublicationSerializer,
     UpdateRecordSerializer,
 )
+
+import gi
+gi.require_version('Modulemd', '2.0')
+from gi.repository import Modulemd as mmdlib
 
 
 class PackageFilter(ContentFilter):
@@ -303,3 +323,29 @@ class CopyViewSet(viewsets.ViewSet):
             kwargs={}
         )
         return OperationPostponedResponse(async_result, request)
+
+
+class ModuleOneShotUpload(ContentViewSet):
+    """
+    ViewSet for One Shot Modulemd Upload
+    """
+
+    endpoint_name = 'modulemd'
+    queryset = Modulemd.objects.all()
+    serializer_class = ModulemdSerializer
+
+    def create(self, request):
+        """Upload Modulemd YAML."""
+        try:
+            artifact = self.get_resource(request.data['_artifact'], Artifact)
+        except KeyError:
+            raise serializers.ValidationError(detail={'_artifact': _('This field is required')})
+        module_index = mmdlib.ModuleIndex.new()
+        modulesmd = _get_modules(artifact.file, module_index)
+        for modulemd in _get_nsvca(modulesmd, module_index):
+            serializer = self.get_serializer(data=modulemd)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        from django.http import HttpResponse
+        return HttpResponse("ok")

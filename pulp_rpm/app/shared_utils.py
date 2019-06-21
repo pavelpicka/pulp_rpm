@@ -40,3 +40,4 @@ def _prepare_package(artifact, filename):
             new_pkg[key] = value
 
     return new_pkg
+
