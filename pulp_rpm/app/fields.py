@@ -3,10 +3,14 @@ from rest_framework import serializers
 from pulp_rpm.app.models import UpdateCollection, UpdateReference
 
 
-class UpdateCollectionField(serializers.ListField):
+class UpdateCollectionField(serializers.Field):
     """
     A serializer field for the 'UpdateCollectionPackage' model.
     """
+
+    def to_internal_value(self, data):
+        """Returns data for serialization in UpdateRecord."""
+        return data
 
     def to_representation(self, value):
         """
@@ -46,10 +50,13 @@ class UpdateCollectionField(serializers.ListField):
         return ret
 
 
-class UpdateReferenceField(serializers.ListField):
+class UpdateReferenceField(serializers.Field):
     """
     A serializer field for the 'UpdateReference' model.
     """
+
+    def to_internal_value(self, data):
+        return data
 
     def to_representation(self, value):
         """

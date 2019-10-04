@@ -11,6 +11,7 @@ from pulpcore.plugin.serializers import (
 from pulpcore.plugin.viewsets import (
     BaseDistributionViewSet,
     ContentFilter,
+    ContentViewSet,
     OperationPostponedResponse,
     PublicationViewSet,
     ReadOnlyContentViewSet,
@@ -135,7 +136,7 @@ class UpdateRecordFilter(ContentFilter):
         }
 
 
-class UpdateRecordViewSet(SingleArtifactContentUploadViewSet):
+class UpdateRecordViewSet(ContentViewSet):
     """
     A ViewSet for UpdateRecord.
 

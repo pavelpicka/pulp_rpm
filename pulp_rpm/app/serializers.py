@@ -1,5 +1,6 @@
 from gettext import gettext as _
 
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework.exceptions import NotAcceptable
 
@@ -34,6 +35,8 @@ from pulp_rpm.app.models import (
     RpmRemote,
     RpmPublication,
     UpdateRecord,
+    UpdateCollection,
+    UpdateCollectionPackage
 )
 
 from pulp_rpm.app.fields import UpdateCollectionField, UpdateReferenceField
@@ -41,6 +44,45 @@ from pulp_rpm.app.fields import UpdateCollectionField, UpdateReferenceField
 
 from pulp_rpm.app.constants import RPM_PLUGIN_TYPE_CHOICE_MAP
 from pulp_rpm.app.shared_utils import _prepare_package
+
+
+class PackageMetadataSerializer(serializers.Serializer):
+    """
+    Package metadata serializer to check Updatecollections.
+    """
+
+    arch = serializers.CharField(
+        help_text=_("Package arch"),
+    )
+    epoch = serializers.CharField(
+        help_text=_("Package epoch"),
+    )
+    filename = serializers.CharField(
+        help_text=_("Package filename"),
+    )
+    name = serializers.CharField(
+        help_text=_("Package name"),
+    )
+    reboot_suggested = serializers.BooleanField(
+        help_text=_("Reboot suggested"),
+    )
+    release = serializers.CharField(
+        help_text=_("Package release"),
+    )
+    src = serializers.CharField(
+        help_text=_("Package source URL"),
+    )
+    sum = serializers.CharField(
+        help_text=_("Package sum"),
+        allow_blank=True
+    )
+    sum_type = serializers.CharField(
+        help_text=_("Package sum type"),
+        allow_blank=True
+    )
+    version = serializers.CharField(
+        help_text=_("Package version"),
+    )
 
 
 class PackageSerializer(SingleArtifactContentUploadSerializer):
@@ -296,6 +338,65 @@ class RpmPublicationSerializer(PublicationSerializer):
         model = RpmPublication
 
 
+class UpdateRecordPackageSerializer(serializers.Serializer):
+    """UpdateRecord Package Serializer"""
+
+    arch = serializers.CharField(
+        help_text=_('Package arch')
+    )
+    epoch = serializers.CharField(
+        help_text=_('Package epoch'),
+        default='0'
+    )
+    filename = serializers.CharField(
+        help_text=_("Package filename")
+    )
+    name = serializers.CharField(
+        help_text=_('Package name')
+    )
+    reboot_suggested = serializers.BooleanField(
+        help_text=_('Whether a reboot is suggested after package installation')
+    )
+    release = serializers.CharField(
+        help_text=_('Package release')
+    )
+    src = serializers.CharField(
+        help_text=_('Source filename')
+    )
+    sum = serializers.CharField(
+        help_text=_('Package checksum')
+    )
+    sum_type = serializers.CharField(
+        help_text=_('Package checksum type')
+    )
+    version = serializers.CharField(
+        help_text=_('Package version')
+    )
+
+
+
+    src = serializers.CharField(
+        help_text=_('Source URL')
+    )
+
+
+class UpdateRecordCollectionSerializer(serializers.Serializer):
+    """UpdateRecord Collection Serialezer"""
+
+    name = serializers.CharField(
+        help_text=_("Name of collection")
+    )
+    shortname = serializers.CharField(
+        help_text=_("Short name of collection"),
+        default='', allow_blank=True
+    )
+    packages = UpdateRecordPackageSerializer(many=True)
+
+    class Meta:
+        fields = ('name', 'shortname')
+        model = UpdateCollection
+
+
 class UpdateRecordSerializer(NoArtifactContentSerializer):
     """
     A Serializer for UpdateRecord.
@@ -324,7 +425,8 @@ class UpdateRecordSerializer(NoArtifactContentSerializer):
         help_text=_("Update name")
     )
     summary = serializers.CharField(
-        help_text=_("Short summary")
+        help_text=_("Short summary"),
+        required=False, allow_blank=True
     )
     version = serializers.CharField(
         help_text=_("Update version (probably always an integer number)")
@@ -334,28 +436,66 @@ class UpdateRecordSerializer(NoArtifactContentSerializer):
         help_text=_("Update type ('enhancement', 'bugfix', ...)")
     )
     severity = serializers.CharField(
-        help_text=_("Severity")
+        help_text=_("Severity"),
+        required=False, allow_blank=True
     )
     solution = serializers.CharField(
-        help_text=_("Solution")
+        help_text=_("Solution"),
+        required=False, allow_blank=True
     )
     release = serializers.CharField(
         help_text=_("Update release")
     )
     rights = serializers.CharField(
-        help_text=_("Copyrights")
+        help_text=_("Copyrights"),
+        required=False, allow_blank=True
     )
     pushcount = serializers.CharField(
-        help_text=_("Push count")
+        help_text=_("Push count"),
+        required=False, allow_blank=True
     )
     pkglist = UpdateCollectionField(
-        source='pk', read_only=True,
-        help_text=_("List of packages")
+        source='pk',
+        help_text=_("List of packages"),
+        required=False
     )
     references = UpdateReferenceField(
-        source='pk', read_only=True,
-        help_text=_("List of references")
+        source='pk',
+        help_text=_("List of references"),
+        required=False
     )
+
+    def create(self, request):
+        """UpdateRecordCollection create."""
+        import pydevd_pycharm
+        pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True)
+        if 'pk' in request:
+            collections = request.pop('pk')
+        update_record = UpdateRecord(**request)
+        try:
+            update_record.save()
+        except IntegrityError:
+            pass
+        if collections:
+            for collection in collections:
+                packages = collection.pop('packages')
+                col = UpdateCollection(**collection)
+                col.update_record_id = update_record.pk
+                try:
+                    col.save()
+                except IntegrityError:
+                    pass
+                for pkg in packages:
+                    package = UpdateCollectionPackage(**pkg)
+                    package.update_collection_id = col.pk
+                    try:
+                        package.save()
+                        col.packages.add(package)
+                    except IntegrityError:
+                        pass
+
+        return update_record
+
 
     class Meta:
         fields = NoArtifactContentSerializer.Meta.fields + (
