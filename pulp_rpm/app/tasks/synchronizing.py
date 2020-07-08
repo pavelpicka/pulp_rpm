@@ -28,11 +28,11 @@ from pulpcore.plugin.stages import (
     DeclarativeArtifact,
     DeclarativeContent,
     DeclarativeVersion,
-    RemoteArtifactSaver,
     Stage,
     QueryExistingArtifacts,
     QueryExistingContents
 )
+#     RemoteArtifactSaver,
 
 from pulp_rpm.app.advisory import hash_update_record
 from pulp_rpm.app.constants import (
@@ -75,6 +75,8 @@ from pulp_rpm.app.kickstart.treeinfo import get_treeinfo_data
 
 from pulp_rpm.app.comps import strdict_to_dict, dict_digest
 from pulp_rpm.app.shared_utils import is_previous_version
+
+from pulp_rpm.app.tasks.workaround import RPMRemoteArtifactSaver as RemoteArtifactSaver
 
 import gi
 gi.require_version('Modulemd', '2.0')
