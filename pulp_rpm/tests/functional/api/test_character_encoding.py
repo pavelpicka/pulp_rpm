@@ -1,5 +1,6 @@
 # coding=utf-8
 """Tests for Pulp's characters encoding."""
+import os
 from urllib.parse import urljoin
 
 from pulp_smash import api, config, utils
@@ -71,3 +72,10 @@ class UploadEncodingMetadataTestCase(PulpTestCase):
                 'artifact': artifact['pulp_href'],
                 'relative_path': RPM_WITH_NON_UTF_8_NAME
             })
+
+    def test_temporary_test(self):
+        """This test will be removed."""
+        print(os.environ)
+        self.assertEqual(
+            os.environ['CDN_CA_CERT'], "this is already exposed by katello github"
+        )
