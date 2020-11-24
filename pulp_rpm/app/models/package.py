@@ -2,10 +2,14 @@ from logging import getLogger
 
 import createrepo_c as cr
 
+from django.conf import settings
 from django.contrib.postgres.fields import JSONField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Window, F
 from django.db.models.functions import RowNumber
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 
 from pulpcore.plugin.models import Content
 
@@ -390,3 +394,14 @@ class Package(Content):
         package.url = getattr(self, PULP_PACKAGE_ATTRS.URL)
         package.version = getattr(self, PULP_PACKAGE_ATTRS.VERSION)
         return package
+
+
+# @receiver(pre_save, sender=Package)
+# def checksum_type_check(sender, instance, **kwargs):
+#     """Check against ALLOWED_CHECKSUM_TYPES"""
+#     if instance.checksum_type not in settings.ALLOWED_CONTENT_CHECKSUMS:
+#         raise ValidationError(
+#             "Can't save package with unsupported checksum type. Must be one of {}".format(
+#                 settings.ALLOWED_CONTENT_CHECKSUMS
+#             )
+#         )

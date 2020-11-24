@@ -1,26 +1,14 @@
 from types import SimpleNamespace
 
+
+ALL_KNOWN_CONTENT_CHECKSUMS = {"md5", "sha1", "sha224", "sha256", "sha384", "sha512"}
+
 CHECKSUM_TYPES = SimpleNamespace(
-    UNKNOWN="unknown",
-    MD5="md5",
-    SHA="sha1",  # compatibility nickname from original createrepo
-    SHA1="sha1",
-    SHA224="sha224",
-    SHA256="sha256",
-    SHA384="sha384",
-    SHA512="sha512",
+    **{value.upper(): value for value in ALL_KNOWN_CONTENT_CHECKSUMS}
 )
 
-# The same as above, but in a format that choice fields can use
-CHECKSUM_CHOICES = (
-    (CHECKSUM_TYPES.UNKNOWN, CHECKSUM_TYPES.UNKNOWN),
-    (CHECKSUM_TYPES.MD5, CHECKSUM_TYPES.MD5),
-    (CHECKSUM_TYPES.SHA, CHECKSUM_TYPES.SHA),
-    (CHECKSUM_TYPES.SHA1, CHECKSUM_TYPES.SHA1),
-    (CHECKSUM_TYPES.SHA224, CHECKSUM_TYPES.SHA224),
-    (CHECKSUM_TYPES.SHA256, CHECKSUM_TYPES.SHA256),
-    (CHECKSUM_TYPES.SHA384, CHECKSUM_TYPES.SHA384),
-    (CHECKSUM_TYPES.SHA512, CHECKSUM_TYPES.SHA512),
+CHECKSUM_CHOICES = tuple(
+    (checksum_type, checksum_type) for checksum_type in ALL_KNOWN_CONTENT_CHECKSUMS
 )
 
 CR_PACKAGE_ATTRS = SimpleNamespace(

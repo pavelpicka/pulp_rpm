@@ -1,0 +1,1 @@
+Supported checksum types are generated from Artifact supported list.

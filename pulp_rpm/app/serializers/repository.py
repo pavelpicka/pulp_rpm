@@ -1,5 +1,6 @@
 from gettext import gettext as _
 
+from django.conf import settings
 from jsonschema import Draft7Validator
 from rest_framework import serializers
 
@@ -118,6 +119,19 @@ class RpmPublicationSerializer(PublicationSerializer):
             "a GPG signature check on the repodata."
         ),
     )
+
+    def validate(self, data):
+        """Validate data."""
+
+        if data['metadata_checksum_type'] not in settings.ALLOWED_CONTENT_CHECKSUMS \
+                or data['package_checksum_type'] not in settings.ALLOWED_CONTENT_CHECKSUMS:
+            raise serializers.ValidationError(
+                "Checksum must be one of allowed types: {}".format(
+                    settings.ALLOWED_CONTENT_CHECKSUMS
+                )
+            )
+        validated_data = super().validate(data)
+        return validated_data
 
     class Meta:
         fields = PublicationSerializer.Meta.fields + (
