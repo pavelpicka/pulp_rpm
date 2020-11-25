@@ -7,6 +7,7 @@ from tempfile import NamedTemporaryFile
 import createrepo_c as cr
 import libcomps
 
+from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage as storage
 from django.db.models import Q
@@ -363,6 +364,15 @@ def create_repomd_xml(
         cwd = os.path.join(cwd, sub_folder)
         repodata_path = os.path.join(sub_folder, repodata_path)
 
+    if package_checksum_type and package_checksum_type not in settings.ALLOWED_CONTENT_CHECKSUMS:
+        raise ValueError(
+            "Repository contains disallowed package checksum type, thus can't be published. "
+            "Checksum must be one of allowed types: {}. "
+            "You can adjust these with 'ALLOWED_CONTENT_CHECKSUMS' settings.".format(
+                settings.ALLOWED_CONTENT_CHECKSUMS
+            )
+        )
+
     # Prepare metadata files
     repomd_path = os.path.join(cwd, "repomd.xml")
     pri_xml_path = os.path.join(cwd, "primary.xml.gz")
@@ -418,6 +428,14 @@ def create_repomd_xml(
     pkg_to_hash = {}
     for ca in contentartifact_qs.iterator():
         pkgid = None
+        if ca.content.rpm_package.checksum_type not in settings.ALLOWED_CONTENT_CHECKSUMS:
+            raise ValueError(
+                "Package {} does not contain allowed checksum type, thus can't be published. "
+                "Checksum must be one of allowed types: {}."
+                "You can adjust these with 'ALLOWED_CONTENT_CHECKSUMS' settings.".format(
+                    ca.content.rpm_package.nevra, settings.ALLOWED_CONTENT_CHECKSUMS
+                )
+            )
         if package_checksum_type:
             package_checksum_type = package_checksum_type.lower()
             pkgid = getattr(ca.artifact, package_checksum_type, None)

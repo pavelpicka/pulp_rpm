@@ -1,5 +1,6 @@
 from gettext import gettext as _
 
+from django.conf import settings
 from jsonschema import Draft7Validator
 from rest_framework import serializers
 
@@ -123,6 +124,21 @@ class RpmPublicationSerializer(PublicationSerializer):
         required=False,
         help_text=_("An option specifying whether Pulp should generate SQLite metadata."),
     )
+
+    def validate(self, data):
+        """Validate data."""
+        if (
+            data["metadata_checksum_type"] not in settings.ALLOWED_CONTENT_CHECKSUMS
+            or data["package_checksum_type"] not in settings.ALLOWED_CONTENT_CHECKSUMS
+        ):
+            raise serializers.ValidationError(
+                _(
+                    "Checksum must be one of allowed types: {}."
+                    "You can adjust these with 'ALLOWED_CONTENT_CHECKSUMS' setting."
+                ).format(settings.ALLOWED_CONTENT_CHECKSUMS)
+            )
+        validated_data = super().validate(data)
+        return validated_data
 
     class Meta:
         fields = PublicationSerializer.Meta.fields + (
